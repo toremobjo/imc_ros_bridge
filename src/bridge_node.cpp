@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     ros_to_imc::BridgeServer<imc_ros_bridge::DesiredSpeed, IMC::DesiredSpeed> DesiredSpeed_server(ros_node, imc_handle, "desired_speed");
     ros_to_imc::BridgeServer<imc_ros_bridge::DesiredZ, IMC::DesiredZ> DesiredZ_server(ros_node, imc_handle, "desired_z");
     ros_to_imc::BridgeServer<imc_ros_bridge::PlanDB, IMC::PlanDB> to_imc_plandb_server(ros_node, imc_handle, "plan_db");
-  
+
     // 450
     imc_to_ros::BridgeServer<IMC::Goto, geometry_msgs::Pose> goto_server(imc_handle, ros_node, "goto_waypoint");
     // 150

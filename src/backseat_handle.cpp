@@ -11,7 +11,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <imc_tcp_link/imc_handle.h>
+#include <imc_tcp_link/backseat_handle.hpp>
 #include <IMC/Spec/Announce.hpp>
 #include <IMC/Spec/Heartbeat.hpp>
 #include <IMC/Spec/EntityInfo.hpp>
@@ -25,33 +25,36 @@ void try_callback(const IMC::Message* imc_msg)
 		std::cout << "Got callback with id: " << imc_msg->getId() << std::endl;
 }
 
-IMCHandle::IMCHandle(const std::string& bridge_tcp_addr, 
-					 const std::string& bridge_tcp_port,
-                     const std::string& neptus_addr,
-                     const std::string& sys_name,
-					 int imc_id,
-					 int imc_src)
-    : udp_link(std::bind(&IMCHandle::tcp_callback, this, std::placeholders::_1),
-               bridge_tcp_addr, bridge_tcp_port, imc_id, imc_src),
-      neptus_addr(neptus_addr),
-      bridge_tcp_addr(bridge_tcp_addr), bridge_tcp_port(bridge_tcp_port),
-      sys_name(sys_name), imc_id(imc_id), imc_src(imc_src)
+BackseatHandle::BackseatHandle(const std::string& bridge_tcp_addr,
+					                     const std::string& bridge_tcp_port,
+                               const std::string& sys_name)
+    : bridge_tcp_addr_(bridge_tcp_addr), bridge_tcp_port_(bridge_tcp_port),
+      sys_name_(sys_name)
 {
     lat = 0.0;
-    announce();
+    tcp_client_ = new ros_imc_broker::TcpLink(boost::bind(&BackseatHandle::tcp_callback, this, _1));
+    tcp_client_->setServer(bridge_tcp_addr_, bridge_tcp_port_);
+    tcp_client_thread_ = new boost::thread(boost::ref(*tcp_client_));
 }
 
-IMCHandle::~IMCHandle()
+BackseatHandle::~BackseatHandle()
 {
-
+    if (tcp_client_thread_ == NULL)
+      return;
+    tcp_client_thread_->interrupt();
+    tcp_client_thread_->join();
+    delete tcp_client_thread_;
+    tcp_client_thread_ = NULL;
+    delete tcp_client_;
+    tcp_client_ = NULL;
 }
 
-void IMCHandle::tcp_subscribe(uint16_t uid, std::function<void(const IMC::Message*)> callback)
+void BackseatHandle::tcp_subscribe(uint16_t uid, std::function<void(const IMC::Message*)> callback)
 {
     callbacks[uid] = callback;
 }
 
-void IMCHandle::tcp_callback(const IMC::Message* msg)
+void BackseatHandle::tcp_callback(const IMC::Message* msg)
 {
     uint16_t uid = msg->getId();
     if (callbacks.count(uid) > 0) {
@@ -65,21 +68,14 @@ void IMCHandle::tcp_callback(const IMC::Message* msg)
     }
     else {
         ROS_INFO("Got tcp message with no configure callback, msgid: %u!", uid);
-	// lets just print the whole message in json format if we can't parse it yet.
-	std::cout << "Message name: " << msg->getName() << std::endl << "Message JSON:" << std::endl;
-	// (ostream, indent)
-	msg->fieldsToJSON(std::cout, 4);
-	std::cout << std::endl;
-    std::cout << "---------------------" << std::endl;
     }
 }
 
-void IMCHandle::announce()
+void BackseatHandle::announce()
 {
     //std::string announce_addr = "224.0.75.69";
     //std::string announce_addr = "192.168.1.160";
-
-    IMC::Announce msg;
+/*IMC::Announce msg;
     msg.sys_name = sys_name;
     // 0=CCU, 1=HUMANSENSOR, 2 = UUV, 3 = ASV, 4=UAV, 5=UGV, 6=STATICSENSOR
     msg.sys_type = 2; // UUV = Unmanned underwater veh.
@@ -98,11 +94,12 @@ void IMCHandle::announce()
     IMC::EntityInfo info_msg;
     //info_msg.id = udp_link.imc_src; //What is this used for?
     info_msg.label = sys_name;
-    udp_link.publish(info_msg, neptus_addr);
+    udp_link.publish(info_msg, neptus_addr);*/
 }
 
-void IMCHandle::publish_heartbeat()
+void BackseatHandle::publish_heartbeat()
 {
     IMC::Heartbeat msg;
-    udp_link.publish(msg, neptus_addr);
+    ROS_WARN("yeeeeet!");
+    //udp_link.publish(msg, neptus_addr);
 }

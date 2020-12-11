@@ -150,6 +150,7 @@ add_library( imc_to_ros_goto src/imc_to_ros/Goto.cpp )
 add_library( imc_factory external/imc-cxx/IMC/Base/Factory.cpp )
 add_library( udp_link src/udp_link.cpp )
 add_library( imc_handle src/imc_handle.cpp )
+add_library( backseat_handle src/backseat_handle.cpp)
 add_library( imc_to_ros_abort src/imc_to_ros/Abort.cpp )
 add_library( imc_to_ros_plandb src/imc_to_ros/PlanDB.cpp )
 add_library( ros_to_imc_plandb src/ros_to_imc/PlanDB.cpp )
@@ -191,6 +192,8 @@ add_dependencies(ros_to_imc_DesiredZ imc_ros_bridge_generate_messages_cpp)
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/imc_ros_bridge_node.cpp)
 add_executable(bridge_node src/bridge_node.cpp)
+add_executable(backseat_driver src/backseat_driver.cpp)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -239,6 +242,12 @@ target_link_libraries(imc_handle
   ${Boost_LIBRARIES}
 )
 
+target_link_libraries(backseat_handle
+  imc_factory
+  udp_link
+  ${Boost_LIBRARIES}
+  )
+
 # 3/3
 target_link_libraries(bridge_node
   imc_to_ros_heartbeat
@@ -267,6 +276,36 @@ target_link_libraries(bridge_node
   ${Boost_LIBRARIES}
   ${catkin_LIBRARIES}
 )
+
+target_link_libraries(backseat_driver
+  imc_to_ros_heartbeat
+  imc_to_ros_goto
+  imc_to_ros_abort
+  imc_to_ros_plandb
+  imc_to_ros_plancontrol
+  ros_to_imc_plandb
+  ros_to_imc_heartbeat
+  ros_to_imc_gpsfix
+  ros_to_imc_goto
+  ros_to_imc_plancontrolstate
+  ros_to_imc_gpsnavdata
+  ros_to_imc_estimatedstate
+  ros_to_imc_vehiclestate
+  ros_to_imc_remotestate
+  ros_to_imc_sonardata
+  ros_to_imc_DesiredHeading
+  ros_to_imc_DesiredHeadingRate
+  ros_to_imc_DesiredPitch
+  ros_to_imc_DesiredRoll
+  ros_to_imc_DesiredSpeed
+  ros_to_imc_DesiredZ
+  imc_handle
+  backseat_handle
+  md5
+  ${Boost_LIBRARIES}
+  ${catkin_LIBRARIES}
+)
+
 
 
 #############
